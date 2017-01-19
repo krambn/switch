@@ -36,12 +36,6 @@ typedef struct switch_hostif_rcode_info_ {
   switch_api_hostif_rcode_info_t rcode_api_info;
 } switch_hostif_rcode_info_t;
 
-typedef struct switch_hostif_info_ {
-  switch_hostif_t hostif;
-  switch_handle_t intf_handle;
-  int intf_fd;
-} switch_hostif_info_t;
-
 typedef enum switch_fabric_header_type_ {
   SWITCH_FABRIC_HEADER_TYPE_NONE = 0,
   SWITCH_FABRIC_HEADER_TYPE_UNICAST = 1,

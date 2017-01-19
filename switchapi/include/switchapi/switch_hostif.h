@@ -123,9 +123,34 @@ typedef struct switch_hostif_packet_ {
 /** Host interface name size */
 #define SWITCH_HOSTIF_NAME_SIZE 16
 
+/** Rx key for net filter */
+typedef struct switch_packet_rx_key_ {
+  bool port_valid;                         /**< port handle valid */
+  switch_handle_t port_handle;             /**< port handle */
+  bool port_lag_valid;                     /**< port lag handle valid */
+  switch_handle_t port_lag_handle;         /**< port lag handle */
+  bool handle_valid;                       /**< bd or interface handle valid */
+  switch_handle_t handle;                  /**< bd or interface handle */
+  bool reason_code_valid;                  /**< reascon code valid */
+  switch_hostif_reason_code_t reason_code; /**< reason code */
+  uint32_t reason_code_mask;               /**< reason code mask */
+  uint32_t priority;                       /**< net filter priority */
+} switch_packet_rx_key_t;
+
+/** Tx key for net filter */
+typedef struct switch_packet_tx_key_ {
+  bool handle_valid;             /**< hostif handle valid */
+  switch_handle_t hostif_handle; /**< hostif handle */
+  bool vlan_valid;               /**< vlan valid */
+  switch_vlan_t vlan_id;         /**< vlan id */
+  uint32_t priority;             /**< net filter priority */
+} switch_packet_tx_key_t;
+
 /** host interface */
 typedef struct switch_hostif_ {
   char intf_name[SWITCH_HOSTIF_NAME_SIZE]; /**< interface name */
+  switch_packet_rx_key_t rx_key;
+  switch_packet_tx_key_t tx_key;
 } switch_hostif_t;
 
 /** CPU Rx Callback */
@@ -218,6 +243,18 @@ switch_status_t switch_api_hostif_delete(switch_device_t device,
  */
 switch_handle_t switch_api_cpu_nhop_get(switch_hostif_reason_code_t rcode);
 
+typedef struct switch_hostif_info_ {
+  switch_hostif_t hostif;
+  switch_handle_t intf_handle;
+  int intf_fd;
+} switch_hostif_info_t;
+
+/**
+ Return hostinfo associated with handle
+ @param hostf_handle host interface handle
+ */
+switch_hostif_info_t *switch_hostif_get(switch_handle_t hostif_handle);
+
 /** Packet vlan action */
 typedef enum switch_packet_vlan_action {
   SWITCH_PACKET_VLAN_NONE = 0x0,
@@ -238,20 +275,6 @@ typedef enum switch_tx_bypass_flags_ {
   SWITCH_BYPASS_ALL = 0xFFFF
 } switch_tx_bypass_flags_t;
 
-/** Rx key for net filter */
-typedef struct switch_packet_rx_key_ {
-  bool port_valid;                         /**< port handle valid */
-  switch_handle_t port_handle;             /**< port handle */
-  bool port_lag_valid;                     /**< port lag handle valid */
-  switch_handle_t port_lag_handle;         /**< port lag handle */
-  bool handle_valid;                       /**< bd or interface handle valid */
-  switch_handle_t handle;                  /**< bd or interface handle */
-  bool reason_code_valid;                  /**< reascon code valid */
-  switch_hostif_reason_code_t reason_code; /**< reason code */
-  uint32_t reason_code_mask;               /**< reason code mask */
-  uint32_t priority;                       /**< net filter priority */
-} switch_packet_rx_key_t;
-
 /** Rx net filter action */
 typedef struct switch_packet_rx_action_ {
   switch_handle_t hostif_handle;           /**< hostif handle */
@@ -259,14 +282,6 @@ typedef struct switch_packet_rx_action_ {
   switch_packet_vlan_action_t vlan_action; /**< vlan packet action */
 } switch_packet_rx_action_t;
 
-/** Tx key for net filter */
-typedef struct switch_packet_tx_key_ {
-  bool handle_valid;             /**< hostif handle valid */
-  switch_handle_t hostif_handle; /**< hostif handle */
-  bool vlan_valid;               /**< vlan valid */
-  switch_vlan_t vlan_id;         /**< vlan id */
-  uint32_t priority;             /**< net filter priority */
-} switch_packet_tx_key_t;
 
 /** Tx net filter ation */
 typedef struct switch_packet_tx_action_ {

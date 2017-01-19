@@ -125,6 +125,10 @@ sai_status_t sai_create_route_entry(
     sai_route_entry_parse(unicast_route_entry, &vrf_handle, &ip_addr);
     sai_route_entry_attribute_parse(attr_count, attr_list, &nhop_handle, &action, &pri);
 
+    if (sai_object_type_query(nhop_handle) == SAI_OBJECT_TYPE_PORT) {
+      if(handle_to_id(nhop_handle) == 64) // should replace 64 with  switch_api)get_cpu_port()
+        nhop_handle = switch_api_cpu_nhop_get(SWITCH_HOSTIF_REASON_CODE_GLEAN);
+    }
     if ((sai_object_type_query(nhop_handle) == SAI_OBJECT_TYPE_ROUTER_INTERFACE) || (nhop_handle == switch_api_cpu_nhop_get(SWITCH_HOSTIF_REASON_CODE_GLEAN))) {
         nhop_handle = 0;
         action = SAI_PACKET_ACTION_TRAP;

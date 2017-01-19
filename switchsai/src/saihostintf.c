@@ -17,6 +17,8 @@ limitations under the License.
 #include <saihostintf.h>
 #include "saiinternal.h"
 #include <switchapi/switch_hostif.h>
+#include <switchapi/switch_interface.h>
+#include <switchapi/switch_hostif.h>
 
 static sai_api_t api_id = SAI_API_HOST_INTERFACE;
 static sai_object_id_t default_hostif_trap_group_id = 0;
@@ -47,6 +49,12 @@ sai_status_t sai_create_hostif(_Out_ sai_object_id_t *hif_id,
   const sai_attribute_t *attribute;
   uint32_t index = 0;
   switch_hostif_t hostif;
+  switch_handle_t handle=0;
+  switch_packet_rx_key_t rx_key;
+  switch_packet_rx_action_t rx_action;
+  switch_packet_tx_key_t tx_key;
+  switch_packet_tx_action_t tx_action;
+  switch_hostif_info_t *host_info=NULL;
 
   if (!attr_list) {
     status = SAI_STATUS_INVALID_PARAMETER;
@@ -63,6 +71,7 @@ sai_status_t sai_create_hostif(_Out_ sai_object_id_t *hif_id,
         }
         break;
       case SAI_HOSTIF_ATTR_RIF_OR_PORT_ID:
+	handle = attribute->value.oid;
         break;
       case SAI_HOSTIF_ATTR_NAME:
         memcpy(hostif.intf_name, attribute->value.chardata, HOSTIF_NAME_SIZE);
@@ -76,6 +85,47 @@ sai_status_t sai_create_hostif(_Out_ sai_object_id_t *hif_id,
                                                   : SAI_STATUS_SUCCESS;
   if (status != SAI_STATUS_SUCCESS) {
     SAI_LOG_ERROR("failed to create hostif: %s", sai_status_to_string(status));
+  }
+
+  memset(&rx_key, 0, sizeof(rx_key));
+  memset(&rx_action, 0, sizeof(rx_action));
+  rx_key.port_valid = 1;
+  switch(sai_object_type_query(handle)) {
+    case SAI_OBJECT_TYPE_PORT:
+      rx_key.port_handle = handle;
+      break;
+    case SAI_OBJECT_TYPE_ROUTER_INTERFACE:
+        status = switch_api_interface_attribute_get(
+            handle, SWITCH_INTF_ATTR_PORT_ID, &(rx_key.port_handle));
+      break;
+    default:
+      break;
+  }
+  rx_key.priority = 1;
+  rx_action.hostif_handle = *hif_id;
+  status = switch_api_packet_net_filter_rx_create(device,
+		  &rx_key, &rx_action);
+  if (status != SAI_STATUS_SUCCESS) {
+    SAI_LOG_ERROR("failed to create hostif rx filter registration: %s", sai_status_to_string(status));
+  }
+
+  memset(&tx_key, 0, sizeof(tx_key));
+  memset(&tx_action, 0, sizeof(tx_action));
+  tx_key.hostif_handle = *hif_id;
+  tx_key.handle_valid = 1;
+  tx_key.priority = 1;
+  tx_action.bypass_flags = SWITCH_BYPASS_ALL;
+  tx_action.port_handle = rx_key.port_handle;
+
+  status = switch_api_packet_net_filter_tx_create( device, &tx_key, &tx_action);
+  if (status != SAI_STATUS_SUCCESS) {
+    SAI_LOG_ERROR("failed to create hostif tx filter registration: %s", sai_status_to_string(status));
+  }
+
+  host_info = switch_hostif_get(*hif_id);
+  if(host_info) {
+    memcpy(&(host_info->hostif.rx_key), &rx_key, sizeof(switch_packet_rx_key_t));
+    memcpy(&(host_info->hostif.tx_key), &tx_key, sizeof(switch_packet_tx_key_t));
   }
 
   SAI_LOG_EXIT();
@@ -94,12 +144,28 @@ sai_status_t sai_create_hostif(_Out_ sai_object_id_t *hif_id,
 *    Failure status code on error
 */
 sai_status_t sai_remove_hostif(_In_ sai_object_id_t hif_id) {
+  switch_hostif_info_t *host_info=NULL;
   SAI_LOG_ENTER();
 
   sai_status_t status = SAI_STATUS_SUCCESS;
   switch_status_t switch_status = SWITCH_STATUS_SUCCESS;
 
   SAI_ASSERT(sai_object_type_query(hif_id) == SAI_OBJECT_TYPE_HOST_INTERFACE);
+  host_info = switch_hostif_get(hif_id);
+  if(host_info) {
+    switch_status = switch_api_packet_net_filter_rx_delete(device, &(host_info->hostif.rx_key));
+    if (status != SAI_STATUS_SUCCESS) {
+      SAI_LOG_ERROR("failed to remove rx filter on hostif %lx: %s",
+                  hif_id,
+                  sai_status_to_string(status));
+    }
+    switch_status = switch_api_packet_net_filter_tx_delete(device, &(host_info->hostif.tx_key));
+    if (status != SAI_STATUS_SUCCESS) {
+      SAI_LOG_ERROR("failed to remove rx filter on hostif %lx: %s",
+                  hif_id,
+                  sai_status_to_string(status));
+    }
+  }
   switch_status = switch_api_hostif_delete(device, hif_id);
   status = sai_switch_status_to_sai_status(switch_status);
 
