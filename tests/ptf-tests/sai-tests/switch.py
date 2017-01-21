@@ -2758,3 +2758,64 @@ class HostIfTest(sai_base_test.ThriftInterfaceDataPlane):
             self.client.sai_thrift_remove_router_interface(rif_id1)
 
             self.client.sai_thrift_remove_virtual_router(vr_id)
+
+class SonicArpTest(sai_base_test.ThriftInterfaceDataPlane):
+    def runTest(self):
+        print
+        switch_init(self.client)
+        port1 = port_list[1]
+        port2 = port_list[2]
+        v4_enabled = 1
+        v6_enabled = 1
+        mac_valid = 0
+        mac = ''
+        l2_qid = 1
+        l2_policer = 2
+        l3_qid = 3
+        l3_policer = 4
+
+        vlan_id = 10
+        self.client.sai_thrift_create_vlan(vlan_id)
+        vlan_member1 = sai_thrift_create_vlan_member(self.client, vlan_id, port1, SAI_VLAN_PORT_UNTAGGED)
+        vlan_member2 = sai_thrift_create_vlan_member(self.client, vlan_id, port2, SAI_VLAN_PORT_UNTAGGED)
+
+        vr_id = sai_thrift_create_virtual_router(self.client, v4_enabled, v6_enabled)
+        vlan_rif_id = sai_thrift_create_router_interface(self.client, vr_id, 0, 0, vlan_id, v4_enabled, v6_enabled, mac)
+
+        l2_trap_group = sai_thrift_create_hostif_trap_group(self.client, l2_qid, l2_policer)
+
+        sai_thrift_create_hostif_trap(
+                       self.client,
+                       SAI_HOSTIF_TRAP_ID_ARP_REQUEST,
+                       SAI_PACKET_ACTION_TRAP,
+                       1000, SAI_HOSTIF_TRAP_CHANNEL_NETDEV,
+                       l2_trap_group)
+
+        sai_thrift_create_hostif_trap(
+                       self.client,
+                       SAI_HOSTIF_TRAP_ID_ARP_RESPONSE,
+                       SAI_PACKET_ACTION_TRAP,
+                       1001,
+                       SAI_HOSTIF_TRAP_CHANNEL_NETDEV,
+                       l2_trap_group)
+
+        hif = sai_thrift_create_hostif(self.client, port1, 'Ethernet1')
+
+        print 'Sending ARP request broadcast'
+        pkt = simple_arp_packet(arp_op=1, pktlen=100)
+        send_packet(self, 1, str(pkt))
+        time.sleep(2)
+        sai_thrift_flush_fdb_by_vlan(self.client, vlan_id)
+        self.client.sai_thrift_remove_hostif(hif)
+
+        self.client.sai_thrift_remove_hostif_trap(SAI_HOSTIF_TRAP_ID_ARP_REQUEST)
+        self.client.sai_thrift_remove_hostif_trap(SAI_HOSTIF_TRAP_ID_ARP_RESPONSE)
+        self.client.sai_thrift_remove_hostif_trap_group(l2_trap_group)
+
+        self.client.sai_thrift_remove_router_interface(vlan_rif_id)
+
+        self.client.sai_thrift_remove_virtual_router(vr_id)
+
+        self.client.sai_thrift_remove_vlan_member(vlan_member1)
+        self.client.sai_thrift_remove_vlan_member(vlan_member2)
+        self.client.sai_thrift_delete_vlan(vlan_id)

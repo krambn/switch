@@ -516,7 +516,6 @@ switch_packet_hostif_create(switch_device_t device, switch_hostif_info_t *hostif
         close(intf_fd);
         return SWITCH_STATUS_FAILURE;
     }
-
     // set connection to be non-blocking
     sock_flags = fcntl(intf_fd, F_GETFL, 0);
     if ((fcntl(intf_fd, F_SETFL, sock_flags | O_NONBLOCK)) < 0) {
@@ -524,8 +523,6 @@ switch_packet_hostif_create(switch_device_t device, switch_hostif_info_t *hostif
         close(intf_fd);
         return SWITCH_STATUS_FAILURE;
     }
-
-
     memset(&mac, 0, sizeof(switch_mac_addr_t));
 //    if (memcmp(&api_switch_info.switch_mac, &mac, ETH_LEN) != 0) 
     {
@@ -579,6 +576,8 @@ switch_status_t switch_packet_hostif_delete(switch_device_t device,
     return SWITCH_STATUS_FAILURE;
   }
   JLD(status, switch_intf_fd_array, hostif_info->intf_fd);
+
+  close(hostif_info->intf_fd);
 
   switch_packet_write_to_pipe();
 
@@ -796,6 +795,7 @@ switch_status_t switch_api_packet_net_filter_tx_delete(
       return SWITCH_STATUS_INVALID_HANDLE;
     }
     tx_entry.intf_fd = hostif_info->intf_fd;
+    tx_entry.fd_valid = tx_key->handle_valid;
   }
 
   if (tx_key->vlan_valid) {
@@ -1044,8 +1044,9 @@ switch_status_t switch_api_packet_net_filter_rx_delete(
     rx_entry.bd = handle_to_id(bd_handle);
   }
 
-  if (rx_entry.port_valid) {
+  if (rx_key->port_valid) {
     rx_entry.port = handle_to_id(rx_key->port_handle);
+    rx_entry.port_valid = rx_key->port_valid;
   }
   rx_entry.bd_valid = rx_key->handle_valid;
   rx_entry.reason_code = rx_key->reason_code;
@@ -1062,7 +1063,7 @@ switch_status_t switch_api_packet_net_filter_rx_delete(
   }
 
   if (!node_found) {
-    SWITCH_API_ERROR("tx filter delete failed. node find failed");
+    SWITCH_API_ERROR("rx filter delete failed. node find failed");
     return SWITCH_STATUS_ITEM_NOT_FOUND;
   }
 

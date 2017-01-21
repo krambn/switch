@@ -154,13 +154,13 @@ sai_status_t sai_remove_hostif(_In_ sai_object_id_t hif_id) {
   host_info = switch_hostif_get(hif_id);
   if(host_info) {
     switch_status = switch_api_packet_net_filter_rx_delete(device, &(host_info->hostif.rx_key));
-    if (status != SAI_STATUS_SUCCESS) {
+    if (switch_status != SAI_STATUS_SUCCESS) {
       SAI_LOG_ERROR("failed to remove rx filter on hostif %lx: %s",
                   hif_id,
                   sai_status_to_string(status));
     }
     switch_status = switch_api_packet_net_filter_tx_delete(device, &(host_info->hostif.tx_key));
-    if (status != SAI_STATUS_SUCCESS) {
+    if (switch_status != SAI_STATUS_SUCCESS) {
       SAI_LOG_ERROR("failed to remove rx filter on hostif %lx: %s",
                   hif_id,
                   sai_status_to_string(status));
