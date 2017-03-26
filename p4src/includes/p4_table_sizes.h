@@ -55,9 +55,9 @@ limitations under the License.
 #define IP_NAT_TABLE_SIZE                      MIN_SRAM_TABLE_SIZE
 #define IP_NAT_FLOW_TABLE_SIZE                 MIN_TCAM_TABLE_SIZE
 #define EGRESS_NAT_TABLE_SIZE                  MIN_SRAM_TABLE_SIZE
-#define IPV4_LPM_TABLE_SIZE                    MIN_TCAM_TABLE_SIZE
+#define IPV4_LPM_TABLE_SIZE                    8192
 #define IPV6_LPM_TABLE_SIZE                    MIN_TCAM_TABLE_SIZE
-#define IPV4_HOST_TABLE_SIZE                   MIN_SRAM_TABLE_SIZE
+#define IPV4_HOST_TABLE_SIZE                   16384
 #define IPV6_HOST_TABLE_SIZE                   MIN_SRAM_TABLE_SIZE
 #define IPV4_MULTICAST_STAR_G_TABLE_SIZE       MIN_SRAM_TABLE_SIZE
 #define IPV4_MULTICAST_S_G_TABLE_SIZE          MIN_SRAM_TABLE_SIZE
